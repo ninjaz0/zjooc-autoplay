@@ -10,7 +10,7 @@ let items=C.videos(document,style);assert.equal(items.length,3);assert.equal(new
 const extra=document.createElement('div');extra.innerHTML=node('仅字体标记视频','glyph');document.querySelector('#tree').append(extra);assert.equal(C.videos(document,style).length,4);extra.remove();
 assert.equal(C.nextIndex([{selected:true},{selected:false},{selected:true}],0),2);
 let tick,stored=null,timerId=0;const timers=new Map();const path='/ucenter/student/course/study/test/plan';const location={pathname:path};
-const ctx={window,document,location,getComputedStyle:style,sessionStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v},setInterval:fn=>tick=fn,setTimeout:(fn,ms)=>{const id=++timerId;if(ms<1000)Promise.resolve().then(fn);else timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id),AbortController,Date,console};window.top=window;window.self=window;
+const ctx={window,document,location,performance:{getEntriesByType:()=>[{type:'reload'}]},getComputedStyle:style,sessionStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v},setInterval:fn=>tick=fn,setTimeout:(fn,ms)=>{const id=++timerId;if(ms<1000)Promise.resolve().then(fn);else timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id),AbortController,Date,console};window.top=window;window.self=window;
 let playing=null,opened=[];const tree=document.querySelector('#tree'),stage=document.querySelector('#stage');
 function mountVideo(item){
  opened.push(item.key);location.pathname=path+'/detail/'+opened.length;tree.remove();stage.innerHTML='<span id="back">返回章节列表</span><video src="demo.mp4"></video>';playing=stage.querySelector('video');
@@ -18,7 +18,7 @@ function mountVideo(item){
  document.querySelector('#back').onclick=()=>{location.pathname=path;stage.replaceChildren();document.body.append(tree)};
 }
 items.forEach(item=>{const target=Array.from(document.querySelectorAll('.icon-shipin')).find(el=>el.closest('[role=treeitem]')===item.element.closest('[role=treeitem]'));target.parentElement.onclick=()=>mountVideo(item);});
-vm.createContext(ctx);vm.runInContext(fs.readFileSync('extension/core.js','utf8'),ctx);vm.runInContext(fs.readFileSync('extension/content.js','utf8'),ctx);
+vm.createContext(ctx);vm.runInContext(fs.readFileSync('extension/core.js','utf8'),ctx);vm.runInContext(fs.readFileSync('extension/persistence.js','utf8'),ctx);vm.runInContext(fs.readFileSync('extension/content.js','utf8'),ctx);
 const ui=document.querySelector('#zjooc-sequence-player').shadowRoot;const flush=async()=>{for(let i=0;i<10;i++)await Promise.resolve();};
 (async()=>{
  ui.getElementById('scan').click();await flush();assert.equal(JSON.parse(stored).queue.length,3);

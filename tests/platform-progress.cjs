@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const {parseHTML}=require('linkedom');
+const C=require('../extension/core.js');
+const row=(title,glyph)=>`<div role="treeitem" class="el-tree-node"><div class="el-tree-node__content"><span class="el-tree-node__expand-icon is-leaf"></span><div><span><i class="icon-video">\ue63e</i><div class="status-mark" data-glyph="${glyph}"></div>${title}</span></div></div></div>`;
+const {document}=parseHTML('<html><body>'+Array.from({length:48},(_,i)=>row('视频'+(i+1),i<7?'\ue621':i===7?'\ue619':'')).join('')+'</body></html>');
+const observed=C.videos(document,el=>({content:el.getAttribute('data-glyph')||'none'}));
+assert.equal(observed.length,48);assert.equal(observed.filter(x=>x.platformStatus==='completed').length,7);
+assert.equal(observed[7].platformStatus,'in-progress');assert.equal(observed[8].platformStatus,'not-started');
+let queue=C.mergePlatform(observed.map(({key,title})=>({key,title})),observed);
+assert.equal(queue.filter(x=>x.selected).length,41);assert.equal(C.nextIndex(queue,-1),7,'fresh install must begin at first unfinished video');
+queue[0].manualSelection=true;queue[8].manualSelection=false;
+queue=C.mergePlatform(queue,observed);assert.equal(queue[0].selected,true,'explicit rewatch must be preserved');assert.equal(queue[8].selected,false,'manual exclusion must survive refresh');
+const changed=observed.map((x,i)=>i===7?{...x,platformStatus:'completed'}:x);queue=C.mergePlatform(queue,changed);assert.equal(queue[7].selected,false);
+const allDone=observed.map(x=>({...x,platformStatus:'completed'}));assert.equal(C.nextIndex(C.mergePlatform(observed,allDone),-1),48);
+console.log('PASS: platform completed/in-progress/not-started; new install selects 41/48 and starts eighth; native completion refresh; explicit rewatch and exclusions; all-complete queue.');

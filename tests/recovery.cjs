@@ -9,9 +9,9 @@ function page(storage, deny=false){
  Object.assign(v,{currentSrc:'demo.mp4',playbackRate:1,defaultPlaybackRate:1,currentTime:0,duration:120,readyState:4,paused:true,seeking:false,ended:false,clientWidth:400,clientHeight:220,getClientRects:()=>[{}],play(){this.paused=false;return Promise.resolve()},pause(){this.paused=true;this.dispatchEvent(new window.Event('pause'))}});
  const location={pathname:path,reload(){reloads++}};
  class Clock extends Date {constructor(...args){super(...(args.length?args:[now]))}static now(){return now}}
- const ctx={window,document,location,Date:Clock,AbortController,console,getComputedStyle:()=>({content:'none'}),sessionStorage:{getItem:()=>storage.value,setItem:(k,val)=>{if(deny)throw Error('storage blocked');storage.value=val;}},setInterval:fn=>tick=fn,setTimeout:(fn,ms)=>{timers.set(++id,{fn,ms});return id},clearTimeout:i=>timers.delete(i)};
+ const ctx={window,document,location,performance:{getEntriesByType:()=>[{type:'reload'}]},Date:Clock,AbortController,console,getComputedStyle:()=>({content:'none'}),sessionStorage:{getItem:()=>storage.value,setItem:(k,val)=>{if(deny)throw Error('storage blocked');storage.value=val;}},setInterval:fn=>tick=fn,setTimeout:(fn,ms)=>{timers.set(++id,{fn,ms});return id},clearTimeout:i=>timers.delete(i)};
  window.top=window;window.self=window;vm.createContext(ctx);
- for(const name of ['core','content'])vm.runInContext(fs.readFileSync('extension/'+name+'.js','utf8'),ctx);
+ for(const name of ['core','persistence','content'])vm.runInContext(fs.readFileSync('extension/'+name+'.js','utf8'),ctx);
  const ui=document.querySelector('#zjooc-sequence-player').shadowRoot;
  return {v,ui,location,timers,tick:()=>tick(),progress(seconds=25){tick();for(let i=1;i<=seconds;i++){now=i*1000;if(!v.paused)v.currentTime+=1;tick();}},state:()=>JSON.parse(storage.value),reloads:()=>reloads,runTimers(){for(const [i,t] of [...timers]){timers.delete(i);t.fn();}}};
 }

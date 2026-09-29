@@ -51,7 +51,7 @@ header = f'''// ==UserScript==
 /* MIT License: Copyright (c) 2026 ninjaz0. See https://github.com/ninjaz0/zjooc-autoplay/blob/main/LICENSE */
 '''
 userscript = DIST / 'zjooc-autoplay.user.js'
-userscript.write_bytes((header + '/*\n' + (ROOT / 'LICENSE').read_text(encoding='utf-8') + '*/\n' + (EXT / 'core.js').read_text(encoding='utf-8') + '\n' + content).encode('utf-8'))
+userscript.write_bytes((header + '/*\n' + (ROOT / 'LICENSE').read_text(encoding='utf-8') + '*/\n' + (EXT / 'core.js').read_text(encoding='utf-8') + '\n' + (EXT / 'persistence.js').read_text(encoding='utf-8') + '\n' + content).encode('utf-8'))
 checksums = ''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in [archive, userscript])
 (DIST / 'SHA256SUMS.txt').write_bytes(checksums.encode('ascii'))
 print(f'Built and verified {archive.name}, {userscript.name}, SHA256SUMS.txt')

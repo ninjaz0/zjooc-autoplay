@@ -17,6 +17,27 @@
       try { return (style(el, '::before').content || '').includes('\ue63e'); } catch (_) { return false; }
     });
   }
+  function platformStatus(content,style=getComputedStyle){
+    let completed=false,started=false,knownVideo=false;
+    for(const el of content.querySelectorAll('i,span,[class]')){
+      let glyph=el.textContent||'';try{glyph+=(style(el,'::before').content||'')+(style(el,'::after').content||'');}catch(_){}
+      // Verified against ZJOOC's green check and orange in-progress dot.
+      if(glyph.includes('\ue621'))completed=true;
+      if(glyph.includes('\ue619'))started=true;
+      if(glyph.includes('\ue63e'))knownVideo=true;
+      const label=el.getAttribute('aria-label')||el.getAttribute('title')||'';
+      if(/^(已完成|已学完|学习完成)$/.test(label.trim()))completed=true;
+      if(/^(学习中|进行中|未完成)$/.test(label.trim()))started=true;
+    }
+    return completed?'completed':started?'in-progress':knownVideo?'not-started':'unknown';
+  }
+  function mergePlatform(queue,found){
+    const byKey=new Map(found.map(item=>[item.key,item]));
+    return queue.map(item=>{
+      const current=byKey.get(item.key);if(!current)return item;
+      return {...item,platformStatus:current.platformStatus,selected:item.manualSelection===undefined?current.platformStatus!=='completed':item.manualSelection};
+    });
+  }
   function videos(doc = document, style = getComputedStyle) {
     return Array.from(doc.querySelectorAll('[role="treeitem"]')).flatMap(node => {
       const content = ownContent(node);
@@ -27,7 +48,7 @@
       if (!title) return [];
       const path = [title];
       for (let parent = node.parentElement?.closest('[role="treeitem"]'); parent; parent = parent.parentElement?.closest('[role="treeitem"]')) path.unshift(titleOf(ownContent(parent)));
-      return [{key: JSON.stringify(path), title, path, element: content.querySelector(':scope > div > span') || content.lastElementChild || content}];
+      return [{key: JSON.stringify(path), title, path, platformStatus:platformStatus(content,style), element: content.querySelector(':scope > div > span') || content.lastElementChild || content}];
     });
   }
   function collapsed(doc = document) {
@@ -100,7 +121,7 @@
       return null;
     }
   }
-  const api = {clean, titleOf, videoMarker, videos, collapsed, exactText, nextIndex, zeroClock, PlaybackHealth, DEFAULT_RATES, speedOptions, chosenRate};
+  const api = {clean, titleOf, videoMarker, videos, collapsed, exactText, nextIndex, platformStatus, mergePlatform, zeroClock, PlaybackHealth, DEFAULT_RATES, speedOptions, chosenRate};
   root.ZjoocCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(globalThis);

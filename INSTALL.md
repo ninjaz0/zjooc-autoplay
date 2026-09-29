@@ -7,8 +7,8 @@
 1. 解压压缩包。
 2. 打开 Chrome，在地址栏输入 `chrome://extensions`。
 3. 开启开发者模式，点击“加载已解压的扩展程序”。
-4. 选择解压后的 `zjooc-autoplay` 文件夹。该文件夹应直接包含 `manifest.json`、`core.js`、`content.js` 和 `help.html`。
-5. 登录 ZJOOC，刷新课程页面。在助手面板点击“识别全部视频”，核对后开始连播。
+4. 选择解压后的 `zjooc-autoplay` 文件夹。该文件夹应直接包含 `manifest.json`、`core.js`、`content.js`、`persistence.js` 和 `help.html`。
+5. 登录 ZJOOC，刷新课程页面。在助手面板点击“识别全部视频”，核对后开始连播；默认跳过平台已完成的视频。关闭浏览器后再次打开课程，可点击“继续上次播放”。
 
 Windows、macOS 使用相同文件。安装时不需要运行命令、不需要编译。ZIP 本身不能双击安装；加载后要保留解压的文件夹。
 
