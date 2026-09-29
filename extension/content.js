@@ -9,7 +9,8 @@
   try{session=sessionStorage;}catch(_){}
   try{local=localStorage;}catch(_){}
   try{navigationType=performance.getEntriesByType('navigation')[0]?.type||'navigate';}catch(_){}
-  const loaded=P.load(course(),{session,local,navigationType});
+  let loadedCourse=course();
+  const loaded=P.load(loadedCourse,{session,local,navigationType});
   let state=loaded.state||{schema:2,queue:[],index:0,running:false,phase:'idle',mutedFallback:true};
   let persistentOK=true,lastCheckpointWrite=0,restorePending=true,resumeEnabled=true;
   const save=()=>{const result=P.save(state,{session,local});persistentOK=result.persistentOK;updateSavedLabel();return result.sessionOK;};
@@ -166,7 +167,7 @@
   function returnDirectory() {
     state.activePath=null;
     if(directory()){state.phase='directory';navigationAt=Date.now();save();return;}
-    const back=C.exactText(document,'返回章节列表');
+    const back=C.exactText(document,'返回章节列表')||C.exactText(document,'章节内容');
     if(!back)return stop('找不到平台的“返回章节列表”入口，请手动返回目录后点击“继续”。',false);
     state.phase='returning';navigationAt=Date.now();save();back.click();
   }
@@ -238,6 +239,17 @@
     target.addEventListener('error',()=>{if(state.running&&target===video)stop('视频加载失败，请手动确认页面后继续。',false);},opt);
     state.phase='video';save();record('已连接当前 HTML5 播放器。');
   }
+  function syncCourse(){
+    const next=course();if(next===loadedCourse)return false;
+    epoch++;cancelTransitions();
+    if(state.running){state.running=false;state.phase='idle';save();}
+    if(video&&video.isConnected&&!video.paused)video.pause();clearVideo();
+    loadedCourse=next;
+    state=P.load(next,{session,local,navigationType:'navigate'}).state||{schema:2,course:next,queue:[],index:0,running:false,phase:'idle',mutedFallback:true};
+    state.running=false;state.phase='idle';resumeEnabled=true;restorePending=true;
+    render();say(state.queue.length?'已找回本课程的记录，点击“继续上次播放”。':'请进入课程目录，点击“识别全部视频”。');
+    if(next)save();return true;
+  }
   function tick(){
     if(!state.running)return;
     if(course()!==state.course)return stop('已离开本课程，连播停止。',false);
@@ -278,5 +290,5 @@
   if(state.lastRecovery&&state.lastRecovery.key===state.queue[state.index]?.key)record('已保留本节队列，等待刷新后的播放器重新加载。');
   if(state.course===course())save();
   record('连播助手 '+VERSION+' 就绪。');
-  setInterval(()=>{try{tick();}catch(err){stop('运行异常：'+err.message,false);}},750);
+  setInterval(()=>{try{if(!syncCourse())tick();}catch(err){stop('运行异常：'+err.message,false);}},750);
 })();

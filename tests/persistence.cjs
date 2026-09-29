@@ -22,10 +22,10 @@ assert.equal(P.bookmark({time:80,duration:NaN,readyState:4,seeking:false,zeroClo
 assert.equal(P.resumeTime({time:84,duration:100},100),82);assert.equal(P.resumeTime({time:84,duration:100},130),null);
 
 // New page/window, with empty sessionStorage and the same durable localStorage.
-function page(){
+function page(initialPath=base){
  const {window,document}=parseHTML('<html><body><main id="app"></main></body></html>');
  Object.defineProperty(window.HTMLSelectElement.prototype,'value',{configurable:true,get(){return Array.from(this.querySelectorAll('option')).find(o=>o.hasAttribute('selected'))?.getAttribute('value')||this.querySelector('option')?.getAttribute('value')||''},set(value){this.querySelectorAll('option').forEach(o=>{if(o.getAttribute('value')===String(value))o.setAttribute('selected','');else o.removeAttribute('selected')})}});
- let now=10000,tick,video,plays=0,opened=[];const location={pathname:base},session=storage();
+ let now=10000,tick,video,plays=0,opened=[];const location={pathname:initialPath},session=storage();
  class Clock extends Date{constructor(...args){super(...(args.length?args:[now]))}static now(){return now}}
  const ctx={window,document,location,performance:{getEntriesByType:()=>[{type:'navigate'}]},sessionStorage:session,localStorage:local,Date:Clock,AbortController,console,getComputedStyle:()=>({content:'none'}),setInterval:fn=>tick=fn,setTimeout:(fn,ms)=>{if(ms<1000)Promise.resolve().then(fn);return 1},clearTimeout(){}};
  window.top=window;window.self=window;
@@ -36,7 +36,7 @@ function page(){
  });
  vm.createContext(ctx);for(const file of ['core','persistence','content'])vm.runInContext(fs.readFileSync('extension/'+file+'.js','utf8'),ctx);
  const ui=document.querySelector('#zjooc-sequence-player').shadowRoot;
- return {window,document,ui,tick:()=>tick(),advance(ms){now+=ms;tick()},get video(){return video},get plays(){return plays},opened,state:()=>JSON.parse(session.getItem(P.SESSION_KEY))};
+ return {window,document,ui,location,tick:()=>tick(),advance(ms){now+=ms;tick()},get video(){return video},get plays(){return plays},opened,state:()=>JSON.parse(session.getItem(P.SESSION_KEY))};
 }
 (async()=>{
  // Restore the initial bookmark after the storage error case modified oldSession only.
@@ -48,5 +48,6 @@ function page(){
  p.document.querySelector('#clock').textContent='00:00 / 00:00';p.video.currentTime=95;p.advance(6000);assert.equal(JSON.parse(local.getItem(P.LOCAL_PREFIX+'course-a')).state.checkpoints[second].time,90,'broken clock must not replace healthy bookmark');
  p.document.querySelector('#clock').textContent='01:33 / 01:40';p.video.currentTime=93;p.window.dispatchEvent(new p.window.Event('pagehide'));assert.equal(JSON.parse(local.getItem(P.LOCAL_PREFIX+'course-a')).state.checkpoints[second].time,93);
  p=page();assert.equal(p.state().index,1);assert.equal(p.state().running,false);assert.equal(p.state().checkpoints[second].time,93);assert.equal(p.plays,0);
+ p=page('/ucenter/student/course/build/list');assert.equal(p.opened.length,0);p.location.pathname=base;p.tick();assert.equal(p.state().index,1);assert.equal(p.state().checkpoints[second].time,93);assert.equal(p.state().running,false);
  console.log('PASS: empty-session restart; per-course isolation; reload vs reopen; exact bookmark restore; speed/mute preferences; 5-second/pagehide save; zero-clock exclusion; storage failure.');
 })().catch(err=>{console.error(err);process.exitCode=1});
