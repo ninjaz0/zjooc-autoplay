@@ -1,0 +1,16 @@
+{
+  "name": "zjooc-autoplay",
+  "version": "1.3.1",
+  "private": true,
+  "description": "ZJOOC course video autoplay helper",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node scripts/test.cjs"
+  },
+  "devDependencies": {
+    "linkedom": "0.18.13"
+  }
+}
