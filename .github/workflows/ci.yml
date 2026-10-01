@@ -27,3 +27,61 @@ jobs:
           name: release-package-${{ matrix.os }}
           path: dist/
           if-no-files-found: error
+
+  release:
+    needs: test
+    if: >-
+      github.event_name == 'push' && github.ref_type == 'tag' &&
+      startsWith(github.ref_name, 'v') && !github.event.deleted
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      # Download only the Ubuntu artifact from this workflow run.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-package-ubuntu-latest
+          path: release-dist/
+      - name: Verify tag and release files
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, re, zipfile
+          from pathlib import Path
+          version = json.loads(Path('extension/manifest.json').read_text())['version']
+          if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version) or os.environ['TAG'] != f'v{version}':
+              raise SystemExit('Tag must equal v<manifest version>')
+          dist = Path('release-dist')
+          files = [dist / f'zjooc-autoplay-v{version}.zip', dist / 'zjooc-autoplay.user.js']
+          sums = ''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\n' for p in files)
+          if (dist / 'SHA256SUMS.txt').read_bytes() != sums.encode('ascii'):
+              raise SystemExit('Release checksums do not match')
+          with zipfile.ZipFile(files[0]) as archive:
+              if archive.testzip() is not None or json.loads(archive.read('zjooc-autoplay/manifest.json'))['version'] != version:
+                  raise SystemExit('Invalid extension archive or version')
+          PY
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG" >/dev/null; then
+            gh release create "$TAG" --verify-tag --draft --title "$TAG" --generate-notes
+          fi
+          gh release upload "$TAG" --clobber \
+            "release-dist/zjooc-autoplay-${TAG}.zip" \
+            release-dist/zjooc-autoplay.user.js \
+            release-dist/SHA256SUMS.txt
+          if [[ "$(gh release view "$TAG" --json isDraft --jq '.isDraft')" == true ]]; then
+            gh release edit "$TAG" --draft=false
+          fi
